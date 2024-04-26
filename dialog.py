@@ -20,7 +20,7 @@ class Ui_Form(object):
         self.pushButton_3 = QtWidgets.QPushButton(Form)
         self.pushButton_3.setGeometry(QtCore.QRect(170, 130, 75, 23))
         self.pushButton_3.setObjectName("pushButton_3")
-        # self.pushButton_3.clicked.connect(self.update_data)
+        self.pushButton_3.clicked.connect(self.update_data)
 
         self.pushButton_4 = QtWidgets.QPushButton(Form)
         self.pushButton_4.setGeometry(QtCore.QRect(250, 130, 75, 23))
@@ -73,6 +73,7 @@ class Ui_Form(object):
         self.lineEdit_5.setGeometry(QtCore.QRect(100, 100, 231, 20))
         self.lineEdit_5.setObjectName("lineEdit_5")
         
+        self.ids = []  # ids リストを初期化
 
         self.retranslateUi(Form)
         QtCore.QMetaObject.connectSlotsByName(Form)
@@ -115,18 +116,20 @@ class Ui_Form(object):
     def selectDB(self):
         conn = self.connect_to_db()
         if conn is None:
-            return
+            return None
 
         try:
             cursor = conn.cursor()
             cursor.execute("SELECT id, name, address, tel, mail FROM account")
             records = cursor.fetchall()
             self.tableWidget.setRowCount(len(records))
+            self.ids.clear()  # 現在のデータをクリア
             for row_number, row_data in enumerate(records):
                 for column_number, data in enumerate(row_data[1:]):  # id を除外してデータを設定
                     item = QtWidgets.QTableWidgetItem(str(data))
                     self.tableWidget.setItem(row_number, column_number, item)
                 # id を非表示で保存
+                self.ids.append(row_data[0])
                 item_id = QtWidgets.QTableWidgetItem(str(row_data[0]))
                 item_id.setFlags(QtCore.Qt.ItemIsEnabled)  # 編集不可に設定
                 self.tableWidget.setItem(row_number, len(row_data)-1, item_id)  # 最後の列に id を追加
@@ -134,6 +137,8 @@ class Ui_Form(object):
             if conn:
                 conn.close()
                 print("PostgreSQL connection is closed")
+        
+        return self.ids  # ids リストを戻り値として返す
 
     def insert_data(self):
         conn = self.connect_to_db()
@@ -155,6 +160,37 @@ class Ui_Form(object):
             if conn:
                 conn.close()
                 print("PostgreSQL connection is closed")
+
+    def update_data(self):
+        conn = self.connect_to_db()
+        if conn is None:
+            return
+
+        selected_row = self.tableWidget.currentRow()
+        if selected_row == -1:
+            print("No row selected")
+            return
+
+        # 選択した行の id を取得
+        item_id = self.ids[selected_row]
+
+        # 更新するデータを取得
+        name = self.lineEdit.text()
+        address = self.lineEdit_2.text()
+        tel = self.lineEdit_3.text()
+        mail = self.lineEdit_5.text()
+
+        try:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE account SET name = %s, address = %s, tel = %s, mail = %s WHERE id = %s",
+                        (name, address, tel, mail, item_id))
+            conn.commit()
+            print("Data updated successfully")
+        finally:
+            if conn:
+                conn.close()
+                print("PostgreSQL connection is closed")
+
 
     def delete_data(self):
         conn = self.connect_to_db()
