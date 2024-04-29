@@ -45,7 +45,7 @@ class Ui_Form(object):
         self.tableWidget.setFrameShadow(QtWidgets.QFrame.Plain)
         self.tableWidget.setMidLineWidth(0)
         self.tableWidget.setRowCount(30)
-        self.tableWidget.setColumnCount(4)
+        self.tableWidget.setColumnCount(6)  # チェックボックス列を追加
         self.tableWidget.setObjectName("tableWidget")
         item = QtWidgets.QTableWidgetItem()
         self.tableWidget.setHorizontalHeaderItem(0, item)
@@ -55,6 +55,10 @@ class Ui_Form(object):
         self.tableWidget.setHorizontalHeaderItem(2, item)
         item = QtWidgets.QTableWidgetItem()
         self.tableWidget.setHorizontalHeaderItem(3, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableWidget.setHorizontalHeaderItem(4, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableWidget.setHorizontalHeaderItem(5, item)  # チェックボックス列を追加
         self.tableWidget.horizontalHeader().setDefaultSectionSize(75)
         self.tableWidget.horizontalHeader().setHighlightSections(True)
         self.tableWidget.horizontalHeader().setMinimumSectionSize(23)
@@ -64,10 +68,10 @@ class Ui_Form(object):
         self.lineEdit.setGeometry(QtCore.QRect(100, 10, 231, 20))
         self.lineEdit.setObjectName("lineEdit")
         self.lineEdit_2 = QtWidgets.QLineEdit(Form)
-        self.lineEdit_2.setGeometry(QtCore.QRect(100, 70, 231, 20))
+        self.lineEdit_2.setGeometry(QtCore.QRect(100, 40, 231, 20))
         self.lineEdit_2.setObjectName("lineEdit_2")
         self.lineEdit_3 = QtWidgets.QLineEdit(Form)
-        self.lineEdit_3.setGeometry(QtCore.QRect(100, 40, 231, 20))
+        self.lineEdit_3.setGeometry(QtCore.QRect(100, 70, 231, 20))
         self.lineEdit_3.setObjectName("lineEdit_3")
         self.lineEdit_5 = QtWidgets.QLineEdit(Form)
         self.lineEdit_5.setGeometry(QtCore.QRect(100, 100, 231, 20))
@@ -90,12 +94,14 @@ class Ui_Form(object):
         self.label_3.setText(_translate("Form", "mail"))
         self.label_4.setText(_translate("Form", "TEL"))
         item = self.tableWidget.horizontalHeaderItem(0)
-        item.setText(_translate("Form", "名前"))
+        item.setText(_translate("Form", "check"))
         item = self.tableWidget.horizontalHeaderItem(1)
-        item.setText(_translate("Form", "住所"))
+        item.setText(_translate("Form", "名前"))
         item = self.tableWidget.horizontalHeaderItem(2)
-        item.setText(_translate("Form", "TEL"))
+        item.setText(_translate("Form", "住所"))
         item = self.tableWidget.horizontalHeaderItem(3)
+        item.setText(_translate("Form", "TEL"))
+        item = self.tableWidget.horizontalHeaderItem(4)
         item.setText(_translate("Form", "mail"))
 
 
@@ -127,12 +133,17 @@ class Ui_Form(object):
             for row_number, row_data in enumerate(records):
                 for column_number, data in enumerate(row_data[1:]):  # id を除外してデータを設定
                     item = QtWidgets.QTableWidgetItem(str(data))
-                    self.tableWidget.setItem(row_number, column_number, item)
+                    self.tableWidget.setItem(row_number, column_number+1, item)  # 列番号をずらす
                 # id を非表示で保存
                 self.ids.append(row_data[0])
                 item_id = QtWidgets.QTableWidgetItem(str(row_data[0]))
                 item_id.setFlags(QtCore.Qt.ItemIsEnabled)  # 編集不可に設定
-                self.tableWidget.setItem(row_number, len(row_data)-1, item_id)  # 最後の列に id を追加
+                self.tableWidget.setItem(row_number, len(row_data), item_id)  # 最後の列に id を追加
+                # チェックボックスを表示
+                check_item = QtWidgets.QTableWidgetItem()
+                check_item.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)  # チェックボックスを表示
+                check_item.setCheckState(QtCore.Qt.Unchecked)
+                self.tableWidget.setItem(row_number, 0, check_item)
         finally:
             if conn:
                 conn.close()
@@ -156,40 +167,45 @@ class Ui_Form(object):
                            (name, address, tel, mail))
             conn.commit()
             print("Data inserted successfully")
+            self.selectDB()
         finally:
             if conn:
                 conn.close()
                 print("PostgreSQL connection is closed")
+                
 
     def update_data(self):
         conn = self.connect_to_db()
         if conn is None:
             return
 
-        selected_row = self.tableWidget.currentRow()
-        if selected_row == -1:
+        selected_rows = []
+        for row in range(self.tableWidget.rowCount()):
+            if self.tableWidget.item(row, 0).checkState() == QtCore.Qt.Checked:
+                selected_rows.append(row)
+
+        if not selected_rows:
             print("No row selected")
             return
 
-        # 選択した行の id を取得
-        item_id = self.ids[selected_row]
-
-        # 更新するデータを取得
-        name = self.lineEdit.text()
-        address = self.lineEdit_2.text()
-        tel = self.lineEdit_3.text()
-        mail = self.lineEdit_5.text()
-
         try:
             cursor = conn.cursor()
-            cursor.execute("UPDATE account SET name = %s, address = %s, tel = %s, mail = %s WHERE id = %s",
-                        (name, address, tel, mail, item_id))
+            for row in selected_rows:
+                item_id = self.ids[row]
+                name = self.lineEdit.text()
+                address = self.lineEdit_2.text()
+                tel = self.lineEdit_3.text()
+                mail = self.lineEdit_5.text()
+                cursor.execute("UPDATE account SET name = %s, address = %s, tel = %s, mail = %s WHERE id = %s",
+                            (name, address, tel, mail, item_id))
             conn.commit()
             print("Data updated successfully")
+            self.selectDB()
         finally:
             if conn:
                 conn.close()
                 print("PostgreSQL connection is closed")
+                
 
 
     def delete_data(self):
@@ -197,28 +213,27 @@ class Ui_Form(object):
         if conn is None:
             return
 
-        selected_row = self.tableWidget.currentRow()
-        if selected_row == -1:
+        selected_rows = []
+        for row in range(self.tableWidget.rowCount()):
+            if self.tableWidget.item(row, 0).checkState() == QtCore.Qt.Checked:
+                selected_rows.append(row)
+
+        if not selected_rows:
             print("No row selected")
             return
 
-        name = self.tableWidget.item(selected_row, 0).text()
-        address = self.tableWidget.item(selected_row, 1).text()
-        tel = self.tableWidget.item(selected_row, 2).text()
-        mail = self.tableWidget.item(selected_row, 3).text()
-
         try:
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM account WHERE name = %s AND address = %s AND tel = %s AND mail = %s",
-                           (name, address, tel, mail))
+            for row in selected_rows:
+                item_id = self.ids[row]
+                cursor.execute("DELETE FROM account WHERE id = %s", (item_id,))
             conn.commit()
             print("Data deleted successfully")
+            self.selectDB()
         finally:
             if conn:
                 conn.close()
                 print("PostgreSQL connection is closed")
-
-
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
