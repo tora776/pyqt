@@ -124,15 +124,37 @@ class Ui_Form(object):
         if conn is None:
             return None
 
+        name_filter = self.lineEdit.text().strip()  # 名前のフィルターを取得
+        address_filter = self.lineEdit_2.text().strip()  # 住所のフィルターを取得
+        tel_filter = self.lineEdit_3.text().strip()  # TELのフィルターを取得
+        mail_filter = self.lineEdit_5.text().strip()  # メールのフィルターを取得
+
         try:
             cursor = conn.cursor()
-            cursor.execute("SELECT id, name, address, tel, mail FROM account")
+            query = "SELECT id, name, address, tel, mail FROM account WHERE TRUE"
+            params = []
+
+            if name_filter:
+                query += " AND name ILIKE %s"
+                params.append('%' + name_filter + '%')
+            if address_filter:
+                query += " AND address ILIKE %s"
+                params.append('%' + address_filter + '%')
+            if tel_filter:
+                query += " AND tel ILIKE %s"
+                params.append('%' + tel_filter + '%')
+            if mail_filter:
+                query += " AND mail ILIKE %s"
+                params.append('%' + mail_filter + '%')
+
+            cursor.execute(query, params)
             records = cursor.fetchall()
             self.tableWidget.setRowCount(len(records))
             self.ids.clear()  # 現在のデータをクリア
             for row_number, row_data in enumerate(records):
                 for column_number, data in enumerate(row_data[1:]):  # id を除外してデータを設定
                     item = QtWidgets.QTableWidgetItem(str(data))
+                    item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)  # 編集不可に設定
                     self.tableWidget.setItem(row_number, column_number+1, item)  # 列番号をずらす
                 # id を非表示で保存
                 self.ids.append(row_data[0])
@@ -148,26 +170,39 @@ class Ui_Form(object):
             if conn:
                 conn.close()
                 print("PostgreSQL connection is closed")
-        
+
         return self.ids  # ids リストを戻り値として返す
+    
 
     def insert_data(self):
         conn = self.connect_to_db()
         if conn is None:
             return
 
-        name = self.lineEdit.text()
-        address = self.lineEdit_2.text()
-        tel = self.lineEdit_3.text()
-        mail = self.lineEdit_5.text()
+        # すべてのLineEditからテキストを取得
+        name = self.lineEdit.text().strip()
+        address = self.lineEdit_2.text().strip()
+        tel = self.lineEdit_3.text().strip()
+        mail = self.lineEdit_5.text().strip()
+
+        # すべてのLineEditが空でないことを確認
+        if not (name and address and tel and mail):
+            print("すべてのフィールドを入力してください。")
+            return
 
         try:
             cursor = conn.cursor()
             cursor.execute("INSERT INTO account (name, address, tel, mail, add_date) VALUES (%s, %s, %s, %s, CURRENT_DATE)",
-                           (name, address, tel, mail))
+                        (name, address, tel, mail))
             conn.commit()
             print("Data inserted successfully")
             self.selectDB()
+            
+            # データが挿入された後、LineEditの中身を初期化
+            self.lineEdit.clear()
+            self.lineEdit_2.clear()
+            self.lineEdit_3.clear()
+            self.lineEdit_5.clear()
         finally:
             if conn:
                 conn.close()
@@ -201,6 +236,7 @@ class Ui_Form(object):
             conn.commit()
             print("Data updated successfully")
             self.selectDB()
+            self.clear_lineEdits()
         finally:
             if conn:
                 conn.close()
@@ -234,6 +270,13 @@ class Ui_Form(object):
             if conn:
                 conn.close()
                 print("PostgreSQL connection is closed")
+
+    def clear_lineEdits(self):
+        self.lineEdit.clear()
+        self.lineEdit_2.clear()
+        self.lineEdit_3.clear()
+        self.lineEdit_5.clear()
+
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
