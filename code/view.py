@@ -58,13 +58,14 @@ class viewMain():
 
     # 削除ボタン押下
     def onClickDeleteBtn(self):
-        # 入力値確認
-        selected_checkRows= self.getCheckedRow()
-        item_id = self.ids[selected_checkRows]
-        # 削除するデータを取得
-        res = self.getSelectDatas(item_id)
-        # DB削除
-        ret = self.db.delete_data(res['name'], res['address'], res['tel'], res['mail'])
+        # チェックされている行のidを格納したリストを作成
+        ids= self.getCheckedRow()
+        for row in ids:
+                item_id = self.ids[row]
+                # 削除するデータを取得
+                res = self.getSelectDatas(item_id)
+                # DB削除
+                ret = self.db.delete_data(res['name'], res['address'], res['tel'], res['mail'])
         # 結果表示
         self.onClickSelectBtn()
         
@@ -105,28 +106,22 @@ class viewMain():
         ret = {'name': name, 'address': address, 'tel': tel, 'mail': mail}
 
         return ret
-    
+
     # テーブルコントロールの選択行のデータ取得
     def getSelectDatas(self, selected_row):
         
         ret = {}
 
-        name = self.ui.tableWidget.item(selected_row, 0).text()
-        address = self.ui.tableWidget.item(selected_row, 1).text()
-        tel = self.ui.tableWidget.item(selected_row, 2).text()
-        mail = self.ui.tableWidget.item(selected_row, 3).text()
+        name = self.ui.tableWidget.item(selected_row, 1).text()
+        address = self.ui.tableWidget.item(selected_row, 2).text()
+        tel = self.ui.tableWidget.item(selected_row, 3).text()
+        mail = self.ui.tableWidget.item(selected_row, 4).text()
 
         ret = {'name': name, 'address': address, 'tel': tel, 'mail': mail}
 
         return ret
-    '''
-    # テーブルコントロールの選択されている行取得
-    def getSelectedRow(self):
-        selected_row = self.ui.tableWidget.currentRow()
-        if selected_row == -1:
-            print("No row selected")
-        return selected_row
-    '''
+
+
     def getCheckedRow(self):
         selected_checks = []
         for row in range(self.ui.tableWidget.rowCount()):
@@ -135,7 +130,7 @@ class viewMain():
 
         if not selected_checks:
             print("No row selected")
-        return row
+        return selected_checks
 
     def clear_lineEdits(self):
         self.lineEdit.clear()
