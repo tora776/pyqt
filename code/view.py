@@ -58,12 +58,13 @@ class viewMain():
 
     # 削除ボタン押下
     def onClickDeleteBtn(self):
-        # チェックされている行のidを格納したリストを作成
+        # チェックされている行番号を格納したリストを作成
         ids= self.getCheckedRow()
+        print(ids)
         for row in ids:
-                item_id = self.ids[row]
+                # item_id = self.ids[row]→DBのidを取得可能
                 # 削除するデータを取得
-                res = self.getSelectDatas(item_id)
+                res = self.getSelectDatas(row)
                 # DB削除
                 ret = self.db.delete_data(res['name'], res['address'], res['tel'], res['mail'])
         # 結果表示
