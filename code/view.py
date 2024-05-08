@@ -26,49 +26,50 @@ class viewMain():
 
     # 追加ボタン押下
     def onClickInsertBtn(self):
+        # テキストボックスの入力されているか確認
+        if self.nameFilter():
+            return
         # 入力値取得
         res = self.getInputTexts()
         # DB追加
         ret = self.db.insert_data(res['name'], res['address'], res['tel'], res['mail'])
         # 結果表示
         self.onClickSelectBtn()
+        self.clear_lineEdits()
 
 
     # 更新ボタン押下
     def onClickUpdateBtn(self):
-
-        # 入力値確認
-        self.getCheckedRow()
-
-        selected_row = self.getSelectedRow()
-        if selected_row == -1:
+        # テキストボックスの入力されているか確認
+        if self.nameFilter():
             return
-
-        # 選択した行の id を取得
-        item_id = self.ids[selected_row]
-
-        # 更新するデータを取得
-        res = self.getInputTexts()
-        # DB更新
-        ret = self.db.update_data(res['name'], res['address'], res['tel'], res['mail'], item_id)
+        # チェックされている行番号を格納したリストを作成
+        rows = self.getCheckedRow()
+        for row in rows:
+            # 選択した行の id を取得
+            item_id = self.ids[row]
+            # 更新するデータを取得
+            res = self.getInputTexts()
+            # DB更新
+            ret = self.db.update_data(res['name'], res['address'], res['tel'], res['mail'], item_id)
         # 結果表示
         self.onClickSelectBtn()
+        self.clear_lineEdits()
 
 
 
     # 削除ボタン押下
     def onClickDeleteBtn(self):
         # チェックされている行番号を格納したリストを作成
-        ids= self.getCheckedRow()
-        print(ids)
-        for row in ids:
-                # item_id = self.ids[row]→DBのidを取得可能
+        rows= self.getCheckedRow()
+        for row in rows:
                 # 削除するデータを取得
                 res = self.getSelectDatas(row)
                 # DB削除
                 ret = self.db.delete_data(res['name'], res['address'], res['tel'], res['mail'])
         # 結果表示
         self.onClickSelectBtn()
+        self.clear_lineEdits()
         
 
     ###################################
@@ -134,7 +135,26 @@ class viewMain():
         return selected_checks
 
     def clear_lineEdits(self):
-        self.lineEdit.clear()
-        self.lineEdit_2.clear()
-        self.lineEdit_3.clear()
-        self.lineEdit_5.clear()
+        self.ui.lineEdit.clear()
+        self.ui.lineEdit_2.clear()
+        self.ui.lineEdit_3.clear()
+        self.ui.lineEdit_5.clear()
+
+    def nameFilter(self):
+        # すべてのLineEditからテキストを取得
+        name = self.ui.lineEdit.text().strip()
+        address = self.ui.lineEdit_2.text().strip()
+        tel = self.ui.lineEdit_3.text().strip()
+        mail = self.ui.lineEdit_5.text().strip()
+
+        # すべてのLineEditが空でないことを確認
+        if not (name and address and tel and mail):
+            print("すべてのフィールドを入力してください。")
+            return True
+        
+        if not "@" in mail:
+            print("メールアドレスに'@'を含めてください。")
+            return True
+        else:
+            return False
+            
